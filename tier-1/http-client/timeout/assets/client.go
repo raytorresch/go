@@ -25,6 +25,7 @@ func NewSecureHttpClient(timeout time.Duration) *SecureHttpClient {
 func (c *SecureHttpClient) Get(ctx context.Context, url string) (*http.Response, error) {
 	// Create a new context with a timeout
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel() // Ensure the cancel function is called to release resources
 
 	req, err := http.NewRequestWithContext(ctxWithTimeout, http.MethodGet, url, nil)
 	if err != nil {

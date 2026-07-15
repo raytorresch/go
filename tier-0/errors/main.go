@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	exceptions "tier-o/errors/domain"
+	exceptions "tier-0/errors/domain"
 )
 
 var ErrPostgresConnection = errors.New("sql: database pg_hsm is down")

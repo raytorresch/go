@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
-	"tier-1/http-client/assets"
+	"tier-1/http-client/timeout/assets"
 	"time"
 )
 
