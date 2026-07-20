@@ -1,3 +1,4 @@
+// Lab: request retries with backoff
 package main
 
 import (
