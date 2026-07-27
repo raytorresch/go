@@ -3,12 +3,32 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"runtime"
 	"time"
 )
 
+// sleepCmd returns a blocking command equivalent to `sleep <seconds>`,
+// since Windows has no "sleep" binary in %PATH% by default.
+func sleepCmd(seconds string) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.Command("powershell", "-NoProfile", "-Command", fmt.Sprintf("Start-Sleep -Seconds %s", seconds))
+	}
+	return exec.Command("sleep", seconds)
+}
+
 func verifyProcessState(pid int, etapa string) {
-	// 'ps -p <PID> -o stat,cmd' show process state (STAT)
-	out, err := exec.Command("ps", "-p", fmt.Sprintf("%d", pid), "-o", "stat,cmd").Output()
+	// Windows has no zombie/defunct state visible in the process list:
+	// once the process exits, tasklist simply stops listing it,
+	// regardless of whether Wait() was called. This check only shows
+	// the real zombie-vs-clean difference on macOS/Linux via `ps`.
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid))
+	} else {
+		cmd = exec.Command("ps", "-p", fmt.Sprintf("%d", pid), "-o", "stat,cmd")
+	}
+
+	out, err := cmd.Output()
 	if err != nil {
 		fmt.Printf("[%s] PID %d NON-EXISTENT Complete cleaning.\n", etapa, pid)
 		return
@@ -23,7 +43,7 @@ func main() {
 	// CASE 1: cmd.Run()
 	// -------------------------------------------------------------
 	fmt.Println("\n--- 1.cmd.Run() ---")
-	cmdRun := exec.Command("sleep", "1")
+	cmdRun := sleepCmd("2")
 
 	fmt.Println("[Run] Ejecutando comando bloqueante (espera 1s)...")
 	start := time.Now()
@@ -44,7 +64,7 @@ func main() {
 	// CASE 2: cmd.Start() WITHOUT cmd.Wait() (Make ZOMBIE)
 	// -------------------------------------------------------------
 	fmt.Println("\n--- 2. cmd.Start() without Wait() ---")
-	cmdStart := exec.Command("sleep", "1")
+	cmdStart := sleepCmd("4")
 
 	if err := cmdStart.Start(); err != nil {
 		fmt.Println("Error:", err)
@@ -57,7 +77,7 @@ func main() {
 	fmt.Println("[Start] Waiting 2 seconds to 'sleep' finished in SO...")
 	time.Sleep(2 * time.Second) // extra time till dead
 
-	fmt.Println("\n⚠️  PROCESS FINISHED, Wait() doesn't called:")
+	fmt.Println("\nPROCESS FINISHED, Wait() doesn't called:")
 	verifyProcessState(pidZombie, "Without Wait()")
 
 	// -------------------------------------------------------------
